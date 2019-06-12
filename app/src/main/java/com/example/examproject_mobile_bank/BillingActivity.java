@@ -28,7 +28,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
-public class BillingActivity extends AppCompatActivity implements NemIDDialog.CallBackListener{
+public class BillingActivity extends AppCompatActivity implements NemIDDialog.CallBackListener {
 
     Spinner accounts;
     EditText amount;
@@ -57,24 +57,24 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_billing);
 
-        if(getIntent().hasExtra(getString(R.string.accounts))){
-            allAccounts= getIntent().getExtras().getParcelableArrayList(getString(R.string.accounts));
+        if (getIntent().hasExtra(getString(R.string.accounts))) {
+            allAccounts = getIntent().getExtras().getParcelableArrayList(getString(R.string.accounts));
             assert allAccounts != null;
         }
-        if (getIntent().hasExtra(getString(R.string.username))){
-            user = (User) getIntent().getExtras().get(getString(R.string.username));
+        if (getIntent().hasExtra(getString(R.string.username))) {
+            user = (User) getIntent().getParcelableExtra(getString(R.string.username));
         }
 
         init();
     }
 
-    public void init(){
+    public void init() {
 
         db = new DatabaseHandler(getApplicationContext());
         database = db.getWritableDatabase();
 
         accounts = (Spinner) findViewById(R.id.account_spinner);
-        spinner_array= new ArrayAdapter<BankAccount>(
+        spinner_array = new ArrayAdapter<BankAccount>(
                 this, android.R.layout.simple_spinner_item, allAccounts
         );
         spinner_array.setDropDownViewResource(android.R.layout.simple_spinner_item);
@@ -96,11 +96,10 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
         date.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus){
+                if (hasFocus) {
                     date_dialog = new DatePicker();
                     date_dialog.show(getSupportFragmentManager(), "datePicker");
-                }
-                else{
+                } else {
                     date.setText(date_dialog.toString());
                 }
             }
@@ -110,7 +109,7 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
             @Override
             public void onClick(View v) {
                 for (EditText field : all_text_fields) {
-                    if(field.getText().toString().isEmpty()){
+                    if (field.getText().toString().isEmpty()) {
                         String warning = getString(R.string.reg_toast);
                         warning = warning.concat(getResources().getResourceEntryName(field.getId())).toUpperCase();
                         Toast toast = Toast.makeText(getBaseContext(), warning, Toast.LENGTH_LONG);
@@ -122,17 +121,17 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
                 BankAccount f = (BankAccount) accounts.getSelectedItem();
                 id = String.valueOf(f.getId());
                 name = f.getName();
-                if(name.equalsIgnoreCase("Pension")){
+                if (name.equalsIgnoreCase("Pension")) {
                     boolean exec = handle_pension_account();
-                    if(!exec){
-//                        TODO: Add Toast Explaining belov 70 age
+                    if (!exec) {
+                        Toast t = Toast.makeText(getBaseContext(), R.string.message_age, Toast.LENGTH_LONG);
+                        t.show();
                     }
                 }
                 target = pbs.getText().toString();
                 t_amount = amount.getText().toString();
                 payment_date = date.getText().toString();
 
-//                TODO: NEMID Database Call
                 String input = " 0123 ";
                 handle_dialog(input, "0123");
 
@@ -145,10 +144,10 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
 
     private void handle_dialog(String input, String pass) {
         nem_dia = new NemIDDialog();
-        Bundle dialog_arguments= new Bundle();
+        Bundle dialog_arguments = new Bundle();
 
-        dialog_arguments.putString("input",input);
-        dialog_arguments.putString("pass",pass);
+        dialog_arguments.putString("input", input);
+        dialog_arguments.putString("pass", pass);
 
         nem_dia.setArguments(dialog_arguments);
         nem_dia.show(getSupportFragmentManager(), "dialog");
@@ -156,15 +155,16 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
 
     @Override
     public void onDialogPositiveClick(DialogFragment dialog) {
-        if(nem_dia.isAuth()) {
-            String[] values = new String[]{String.valueOf(user.getId()),payment_date, t_amount, id, target};
+        if (nem_dia.isAuth()) {
+//            TODO: ADD REPEAT CHECKBOX HERE
+            int repeat = 0;
+            String[] values = new String[]{String.valueOf(user.getId()), payment_date, t_amount, id, target, String.valueOf(repeat)};
             db.new_bill(database, values);
             Bundle extras_bundle = new Bundle();
             extras_bundle.putParcelable(getString(R.string.username), user);
             i1.putExtras(extras_bundle);
             startActivity(i1);
-        }
-        else{
+        } else {
             Toast toast = Toast.makeText(this, R.string.alert_wrong, Toast.LENGTH_LONG);
             toast.show();
         }
@@ -176,29 +176,27 @@ public class BillingActivity extends AppCompatActivity implements NemIDDialog.Ca
         dialog.dismiss();
     }
 
-    public boolean handle_pension_account(){
+    public boolean handle_pension_account() {
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-                    String now = sdf.format(new Date());
-                    try {
-                        Date d1 = sdf.parse(now);
-                        Date d2 = sdf.parse(user.getB_day());
-                        Calendar c = Calendar.getInstance();
+        String now = sdf.format(new Date());
+        try {
+            Date d1 = sdf.parse(now);
+            Date d2 = sdf.parse(user.getB_day());
+            Calendar c = Calendar.getInstance();
 
-                        c.setTimeInMillis(d2.getTime());
-                        int mYear = c.get(Calendar.YEAR);
-                        c.setTimeInMillis(d1.getTime());
-                        int nYear = c.get(Calendar.YEAR);
+            c.setTimeInMillis(d2.getTime());
+            int mYear = c.get(Calendar.YEAR);
+            c.setTimeInMillis(d1.getTime());
+            int nYear = c.get(Calendar.YEAR);
 
-                        if (nYear-mYear >= 70){
-                            return true;
-                        }
-                        else{
-                            return false;
-                        }
-                    }
-                    catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                    return false;
+            if (nYear - mYear >= 70) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

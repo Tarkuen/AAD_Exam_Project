@@ -12,6 +12,7 @@
     <string name="reg_toast">Missing Information: </string>
     <string name="home_toast">Welcome </string>
     <string name="message_toast">Welcome </string>
+    <string name="message_age">Withdrawing money will not be available until you are 77.</string>
 
     <!--SNACKBAR-->
     <string name="message_pay">Pay </string>
@@ -26,7 +27,6 @@
     <string name="alert_NO">Cancel</string>
     <string name="alert_wrong">Wrong Passcode - Cannot Transfer </string>
 
-
     <!--REGISTER ACTIVITY-->
     <string name="title_activity_register">Open Account</string>
     <string name="name">Full Name</string>
@@ -35,28 +35,38 @@
     <string name="addr1">Street Address</string>
     <string name="addr2">City</string>
     <string name="addr3">Zip Code</string>
-    <string name="b_day">Payment Date</string>
+    <string name="b_day">Birth Date</string>
+    <string name="question">What is the first book you ever read?</string>
+    <string name="answer">Secret Answer</string>
 
     <!--ACCOUNT REQUEST ACTIVITY-->
     <string name="account_reg">Request Account</string>
+    <string name="exists">Account Already Exists</string>
+    <string name="account_update">Monthly Deposit updated</string>
+    <string name="no_default">Private Customer Account regquired for a Business account</string>
+    <string name="monthly_deposit">Monthly Deposit</string>
 
     <!--HOMESCREEN ACTIVITY-->
     <string name="welcome">Welcome</string>
     <string name="pay">New Payment</string>
     <string name="transfer">New Transfer</string>
-    <string name="account">Request New Account</string>
+    <string name="bills">Pay or Plan Bill</string>
     <string name="accounts">allacc</string>
 
     <!--NavBar-->
-    <string name="acc">Account</string>
+    <string name="acc">Request/Change Accounts</string>
+    <string name="account">Account_name</string>
+    <string name="department">Nearest Department </string>
+    <string name="new_transfer">New Transfer</string>
     <string name="logout">Log Out</string>
-    <string name="contact">Log Out</string>
+    <string name="contact">Contact Us</string>
     <string name="opt">Options</string>
     <string name="n_d_o">Open Navigation</string>
     <string name="n_d_c">Close Navigation</string>
 
     <!--Transfer Activity-->
     <string name="action_settings">Settings</string>
+    <string name="amount_check">Amount higher than current holding </string>
     <string name="transfer_switch">Own Account Transfer </string>
     <string name="transfer_complete">Transfer amount</string>
     <string name="amount">amount</string>
@@ -68,5 +78,9 @@
     <string name="bill_pbs">PBS Number</string>
     <string name="bill_amount">Billing Amount</string>
 
+    <!--RECOVER PASSWORD-->
+    <string name="request_password">Recover Password Here</string>
+    <string name="request_recover">Recover</string>
+    <string name="request_name">Full Name</string>
 
 </resources>

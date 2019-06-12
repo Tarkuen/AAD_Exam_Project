@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
-public class TransferActivity extends AppCompatActivity implements NemIDDialog.CallBackListener{
+public class TransferActivity extends AppCompatActivity implements NemIDDialog.CallBackListener {
 
     Switch switch1;
     Spinner spinner1;
@@ -50,12 +50,12 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_transfer);
 
-        if(getIntent().hasExtra(getString(R.string.accounts))){
-            allAccounts= getIntent().getExtras().getParcelableArrayList(getString(R.string.accounts));
+        if (getIntent().hasExtra(getString(R.string.accounts))) {
+            allAccounts = getIntent().getParcelableArrayListExtra(getString(R.string.accounts));
             assert allAccounts != null;
         }
-        if (getIntent().hasExtra(getString(R.string.username))){
-            user = (User) getIntent().getExtras().get(getString(R.string.username));
+        if (getIntent().hasExtra(getString(R.string.username))) {
+            user = (User) getIntent().getParcelableExtra(getString(R.string.username));
         }
 
         init();
@@ -63,18 +63,18 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
 
     }
 
-    public void init(){
+    public void init() {
 
-        amount= (EditText) findViewById(R.id.amount);
-        account= (EditText) findViewById(R.id.account);
+        amount = (EditText) findViewById(R.id.amount);
+        account = (EditText) findViewById(R.id.account);
         transfer = (Button) findViewById(R.id.transfer);
 
-        switch1= (Switch) findViewById(R.id.switch1);
+        switch1 = (Switch) findViewById(R.id.switch1);
 
         spinner1 = (Spinner) findViewById(R.id.spinner1);
         spinner2 = (Spinner) findViewById(R.id.spinner2);
 
-        ArrayAdapter<BankAccount> spinner_array= new ArrayAdapter<BankAccount>(
+        ArrayAdapter<BankAccount> spinner_array = new ArrayAdapter<BankAccount>(
                 this, android.R.layout.simple_spinner_item, allAccounts
         );
         spinner_array.setDropDownViewResource(android.R.layout.simple_spinner_item);
@@ -91,17 +91,16 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
 
     }
 
-    public void actions(){
+    public void actions() {
 
         switch1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){
+                if (isChecked) {
                     account.setVisibility(View.INVISIBLE);
                     account.setText("");
                     spinner2.setVisibility(View.VISIBLE);
-                }
-                else{
+                } else {
                     account.setVisibility(View.VISIBLE);
                     spinner2.setVisibility(View.INVISIBLE);
                 }
@@ -113,18 +112,37 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
             public void onClick(View v) {
                 BankAccount f = (BankAccount) spinner1.getSelectedItem();
                 int trans_amount = Integer.valueOf(amount.getText().toString());
-//                TODO: Error Handling : Amount larger than current balance. Make Toast and return
-                if (switch1.isChecked()){
-                    BankAccount to = (BankAccount) spinner2.getSelectedItem();
-                    db.internal_transfer(database,trans_amount, user.getId(), f.getName(), to.getName());
-                    startActivity(i1);
-//                    TODO: Billing history for accounts
+                if (trans_amount> f.getHoldings()){
+                    Toast t = Toast.makeText(getBaseContext(), R.string.amount_check, Toast.LENGTH_LONG);
+                    t.show();
+                    return;
                 }
-                else {
-//                    TODO: Toast Message on mainscreen.
+                if (switch1.isChecked()) {
+                    BankAccount to = (BankAccount) spinner2.getSelectedItem();
 
-                    String input = " 0123 ";
-                    handle_dialog(input, "0123");
+                    if(f.getName().equalsIgnoreCase("Budget") || f.getName().equalsIgnoreCase("Savings")){
+                        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                        Calendar c = Calendar.getInstance();
+                        c.add(Calendar.MONTH, 1);
+                        c.set(Calendar.DATE, c.getActualMinimum(Calendar.DAY_OF_MONTH));
+                        Date next_month = c.getTime();
+                        String pay_date = sdf.format(next_month);
+                        int repeat = 0;
+                        String[] values = new String[]{String.valueOf(user.getId()), pay_date, String.valueOf(trans_amount), String.valueOf(f.getId()), to.getName(), String.valueOf(repeat)};
+
+                        db.new_bill(database,values);
+                        startActivity(i1);
+                    }
+                    else{
+                        db.internal_transfer(database, trans_amount, user.getId(), f.getName(), to.getName());
+                        startActivity(i1);
+                    }
+
+                } else {
+//                  TODO: Toast Message on mainscreen.
+
+
+                    handle_dialog(" 0123 ", "0123");
                 }
 
             }
@@ -133,10 +151,10 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
 
     private void handle_dialog(String input, String pass) {
         nem_dia = new NemIDDialog();
-        Bundle dialog_arguments= new Bundle();
+        Bundle dialog_arguments = new Bundle();
 
-        dialog_arguments.putString("input",input);
-        dialog_arguments.putString("pass",pass);
+        dialog_arguments.putString("input", input);
+        dialog_arguments.putString("pass", pass);
 
         nem_dia.setArguments(dialog_arguments);
         nem_dia.show(getSupportFragmentManager(), "dialog");
@@ -146,24 +164,23 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
     public void onDialogPositiveClick(DialogFragment dialog) {
         BankAccount f = (BankAccount) spinner1.getSelectedItem();
 
-        if(f.getName().equalsIgnoreCase("Pension")){
+        if (f.getName().equalsIgnoreCase("Pension")) {
             boolean exec = handle_pension_account();
-            if(!exec){
+            if (!exec) {
 //                        TODO: Add Toast Explaining belov 70 age
             }
         }
 
-        if(nem_dia.isAuth()) {
+        if (nem_dia.isAuth()) {
             int trans_amount = Integer.valueOf(amount.getText().toString());
             String to = account.getText().toString();
 
-            db.reduce_funds(database, new String[]{String.valueOf(f.getId())}, trans_amount,to);
+            db.reduce_funds(database, new String[]{String.valueOf(f.getId())}, trans_amount, to);
 
             startActivity(i1);
 
-            Log.i("TRANSFER INFO", "TRANSFERED AMOUTN FROM ACCOUNT: "+f.toString()+" TO: "+to);
-        }
-        else{
+            Log.i("TRANSFER INFO", "TRANSFERED AMOUTN FROM ACCOUNT: " + f.toString() + " TO: " + to);
+        } else {
             Toast toast = Toast.makeText(this, R.string.alert_wrong, Toast.LENGTH_LONG);
             toast.show();
         }
@@ -175,7 +192,7 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
         dialog.dismiss();
     }
 
-    public boolean handle_pension_account(){
+    public boolean handle_pension_account() {
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
         String now = sdf.format(new Date());
         try {
@@ -188,14 +205,12 @@ public class TransferActivity extends AppCompatActivity implements NemIDDialog.C
             c.setTimeInMillis(d1.getTime());
             int nYear = c.get(Calendar.YEAR);
 
-            if (nYear-mYear >= 70){
+            if (nYear - mYear >= 70) {
                 return true;
-            }
-            else{
+            } else {
                 return false;
             }
-        }
-        catch (ParseException e) {
+        } catch (ParseException e) {
             e.printStackTrace();
         }
         return false;

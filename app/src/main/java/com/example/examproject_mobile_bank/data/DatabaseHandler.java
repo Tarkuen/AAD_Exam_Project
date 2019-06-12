@@ -15,6 +15,7 @@ import com.example.examproject_mobile_bank.model.User;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
@@ -48,7 +49,13 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String bill_amount = "bill_amount";
     private static final String bill_account = "bill_account";
     private static final String bill_target = "bill_target";
+    private static final String bill_repeat = "bill_repeat";
 
+    private static final String secrets = "SECRET_TABLE";
+    private static final String secret_ID = "ID";
+    private static final String secrets_user = "secret_user";
+    private static final String secret_quest = "secret_question";
+    private static final String secret_ansvwer = "secret_answer";
 
     enum departments {
         Copenhagen,
@@ -80,9 +87,13 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         } catch (RuntimeException e) {
             Log.w("TABLE EXCEPTION", e.getMessage());
         }
-
         try {
             db.execSQL(create_bills());
+        } catch (RuntimeException e) {
+            Log.w("TABLE EXCEPTION", e.getMessage());
+        }
+        try {
+            db.execSQL(create_secrets());
         } catch (RuntimeException e) {
             Log.w("TABLE EXCEPTION", e.getMessage());
         }
@@ -92,7 +103,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db) {
         db.execSQL("DROP TABLE IF EXISTS " + user);
         db.execSQL("DROP TABLE IF EXISTS " + accounts);
-        db.execSQL("DROP TABLE IF EXISTS "+ bills);
+        db.execSQL("DROP TABLE IF EXISTS " + bills);
     }
 
     @Override
@@ -103,7 +114,6 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private String create_users() {
         return "CREATE TABLE " + user
                 + " ( " +
-
                 user_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 user_username + " TEXT, " +
                 user_password + " TEXT, " +
@@ -112,7 +122,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 user_street + " TEXT, " +
                 user_city + " TEXT, " +
                 user_zip + " INTEGER, " +
-                user_dep + " TEXT " +
+                user_dep + " TEXT, " +
+                user_bday + " TEXT" +
 
                 " ); ";
     }
@@ -127,7 +138,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 " ); ";
     }
 
-    public String create_bills() {
+    private String create_bills() {
         return "CREATE TABLE " + bills
                 + " ( " +
                 bill_id + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -135,7 +146,18 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 bill_date + " TEXT, " +
                 bill_amount + " INTEGER, " +
                 bill_account + " TEXT, " +
-                bill_target + " TEXT " +
+                bill_target + " TEXT, " +
+                bill_repeat + " INTEGER" +
+                " ); ";
+    }
+
+    private String create_secrets() {
+        return "CREATE TABLE " + secrets
+                + " ( " +
+                secret_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                secrets_user + " INTEGER, " +
+                secret_quest + " TEXT, " +
+                secret_ansvwer + " TEXT " +
                 " ); ";
     }
 
@@ -149,7 +171,6 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         subject_values.put(user_street, values[4]);
         subject_values.put(user_city, values[5]);
         subject_values.put(user_zip, values[6]);
-        subject_values.put(user_bday, values[7]);
         if (Integer.valueOf(values[6]) > 5000) {
             String department = String.valueOf(departments.Copenhagen);
             subject_values.put(user_dep, department);
@@ -157,14 +178,15 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             String department = String.valueOf(departments.Odense);
             subject_values.put(user_dep, department);
         }
+        subject_values.put(user_bday, values[7]);
 
         return db.insert(user, null, subject_values);
 
     }
 
-    public User fetch_user_ID(SQLiteDatabase db, String value) {
+    public User fetch_user_by_ID(SQLiteDatabase db, String value) {
 
-        Cursor result = db.query(user, null, "ID = ?", new String[]{value}, null, null, null);
+        Cursor result = db.query(user, null, user_ID + " = ?", new String[]{value}, null, null, null);
 
         int id = -1;
         String name = "";
@@ -187,7 +209,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             b_day = result.getString(result.getColumnIndex(user_bday));
         }
         result.close();
-        return new User(id, name, phone, mail, street, city, zip, department, user_bday);
+        return new User(id, name, phone, mail, street, city, zip, department, b_day);
     }
 
     public User fetch_user_login(SQLiteDatabase db, String[] values) {
@@ -228,7 +250,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             int id = result.getInt(result.getColumnIndex(account_ID));
             String name = result.getString(result.getColumnIndex(account_name));
             int user = result.getInt(result.getColumnIndex(account_user));
-            User u = fetch_user_ID(db, String.valueOf(user));
+            User u = fetch_user_by_ID(db, String.valueOf(user));
 
             int holding = result.getInt(result.getColumnIndex(account_holding));
 
@@ -236,6 +258,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
             allAccounts.add(b);
         }
+        result.close();
         return allAccounts;
     }
 
@@ -267,7 +290,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public void first_account(SQLiteDatabase db, String values) {
         ContentValues subject_values = new ContentValues();
 
-        User u = fetch_user_ID(db, values);
+        User u = fetch_user_by_ID(db, values);
         int id = u.getId();
 
         subject_values.put(account_name, String.valueOf(accountsEnum.Default));
@@ -280,21 +303,48 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         subject_values.put(account_user, id);
         subject_values.put(account_holding, 1000);
 
-        db.insert(accounts, null, subject_values);
+        Long account_id = db.insert(accounts, null, subject_values);
+
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.MONTH, 1);
+        c.set(Calendar.DATE, c.getActualMinimum(Calendar.DAY_OF_MONTH));
+        Date next_month = c.getTime();
+        String pay_date = sdf.format(next_month);
+        int repeat = 1;
+        String[] bill_v = new String[]{String.valueOf(id), pay_date, String.valueOf(0), String.valueOf(account_id), "TARGET", String.valueOf(repeat)};
+
+        new_bill(db, bill_v);
     }
 
-    public void new_account(SQLiteDatabase db, String[] values) {
+    public long new_account(SQLiteDatabase db, String[] values) {
         ContentValues subject_values = new ContentValues();
 
         subject_values.put(account_name, values[0]);
         subject_values.put(account_user, values[1]);
         subject_values.put(account_holding, 0);
+        String pay_date = "";
+        int repeat = 1;
+        if (values[0].equalsIgnoreCase("Savings")) {
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            Calendar c = Calendar.getInstance();
+            c.add(Calendar.MONTH, 1);
+            c.set(Calendar.DATE, c.getActualMinimum(Calendar.DAY_OF_MONTH));
+            Date next_month = c.getTime();
+            pay_date = sdf.format(next_month);
+        }
 
-        db.insert(accounts, null, subject_values);
+        long account_id = db.insert(accounts, null, subject_values);
+
+        String[] va = new String[]{String.valueOf(values[1]), pay_date, String.valueOf(0), String.valueOf(account_id), " ", String.valueOf(repeat)};
+
+        new_bill(db, va);
+
+        return account_id;
     }
 
     public void internal_transfer(SQLiteDatabase db, int amount, int user_id, String name1, String name2) {
-//        From
+
         ContentValues f_values = new ContentValues();
 
         String where = account_user + " = ? AND " + account_name + " = ?";
@@ -308,7 +358,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         }
         result.close();
 
-//        To
+
         ContentValues t_values = new ContentValues();
         result = db.query(accounts, null, where, new String[]{String.valueOf(user_id), name2}, null, null, null);
 
@@ -316,7 +366,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             String id = String.valueOf(result.getInt(result.getColumnIndex(account_ID)));
             int holding = result.getInt(result.getColumnIndex(account_holding));
             t_values.put(account_holding, holding + amount);
-            System.out.println(db.update(accounts, t_values, account_ID + " = ?", new String[]{id}));
+           db.update(accounts, t_values, account_ID + " = ?", new String[]{id});
         }
 
         result.close();
@@ -327,7 +377,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public void reduce_funds(SQLiteDatabase db, String[] values, int amount, String to) {
         ContentValues f_values = new ContentValues();
 
-        String where = account_ID+" = ?";
+        String where = account_ID + " = ?";
         Cursor result = db.query(accounts, null, where, values, null, null, null);
 
         while (result.moveToNext()) {
@@ -336,20 +386,78 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             f_values.put(account_holding, (holding - amount));
             db.update(accounts, f_values, account_ID + " = ?", new String[]{id});
         }
+        Log.i("TRANSFER INFO", "TRANSFERED" + amount + " FROM " + values[0] + " TO " + to);
         result.close();
 
     }
 
-    public void new_bill(SQLiteDatabase db, String[] values){
+    public void new_bill(SQLiteDatabase db, String[] values) {
         ContentValues subject_values = new ContentValues();
-
         subject_values.put(bill_user, values[0]);
         subject_values.put(bill_date, values[1]);
         subject_values.put(bill_amount, values[2]);
         subject_values.put(bill_account, values[3]);
         subject_values.put(bill_target, values[4]);
+        subject_values.put(bill_repeat, values[5]);
 
         db.insert(bills, null, subject_values);
+    }
+
+    public Bill fetch_repeat_bills(SQLiteDatabase db, String u_id, String account_ID) {
+        Bill b = new Bill();
+
+        Cursor result = db.query(bills, null, bill_user + " = ? AND " + bill_repeat + " = ? AND " + bill_account + " = ?", new String[]{u_id, "1", account_ID}, null, null, null);
+
+        while (result.moveToNext()) {
+            int id = result.getInt(result.getColumnIndex(bill_id));
+            String b_date = result.getString(result.getColumnIndex(bill_date));
+            int user_id = result.getInt(result.getColumnIndex(bill_user));
+            int amount = result.getInt(result.getColumnIndex(bill_amount));
+            int acc = result.getInt(result.getColumnIndex(bill_account));
+            int target = result.getInt(result.getColumnIndex(bill_target));
+            int repeat = result.getInt(result.getColumnIndex(bill_repeat));
+
+            b = new Bill(id, b_date, user_id, amount, acc, target, repeat);
+        }
+        result.close();
+        return b;
+    }
+
+    public void handle_repeat_bills(SQLiteDatabase db, ArrayList<BankAccount> user_accounts) throws ParseException {
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+        Calendar c = Calendar.getInstance();
+        String s_d1 = sdf.format(new Date());
+        Date d1 = sdf.parse(s_d1);
+        ArrayList<Bill> due_bills = new ArrayList<>();
+
+        for (BankAccount user_account : user_accounts) {
+            if (user_account.getName().equalsIgnoreCase("Budget") || user_account.getName().equalsIgnoreCase("Savings")) {
+                Bill b = fetch_repeat_bills(db, String.valueOf(user_account.getUser_id()), String.valueOf(user_account.getId()));
+                Date d2 = sdf.parse(b.getB_date());
+                if (d2.before(d1) || d2.equals(d1)){
+                    due_bills.add(b);
+                }
+            }
+        }
+
+        pay_bills(db, due_bills);
+
+        c.add(Calendar.MONTH, 1);
+        c.set(Calendar.DATE, c.getActualMinimum(Calendar.DAY_OF_MONTH));
+        Date next_month = c.getTime();
+        String pay_date = sdf.format(next_month);
+
+        for (Bill dueBill : due_bills) {
+            new_bill(db, new String[]{String.valueOf(dueBill.getUser()), pay_date, String.valueOf(dueBill.getAmount()), String.valueOf(dueBill.getAccount()), String.valueOf(dueBill.getTarget()), String.valueOf(dueBill.getRepeat())});
+        }
+    }
+
+    public void update_repeat_bill(SQLiteDatabase db, String user_i, String account_ID, String amount) {
+        Bill b = fetch_repeat_bills(db, user_i, account_ID);
+        ContentValues val = new ContentValues();
+        val.put(bill_amount, amount);
+
+        db.update(bills, val, bill_user + " = ? AND " + bill_account + " = ?", new String[]{user_i, String.valueOf(b.getId())});
     }
 
     public ArrayList<Bill> fetch_all_due_user_bills(SQLiteDatabase db, String[] values) throws ParseException {
@@ -358,7 +466,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         String now = sdf.format(new Date());
         Date d1 = sdf.parse(now);
 
-        String where = bill_user+" = ?";
+        String where = bill_user + " = ? AND " + bill_repeat + " = ?";
 
         Cursor result = db.query(bills, null, where, values, null, null, null);
 
@@ -375,7 +483,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
             Date bill_date = sdf.parse(b_date);
 
-            if (bill_date.before(d1) || bill_date.compareTo(d1)==0){
+            if (bill_date.before(d1) || bill_date.compareTo(d1) == 0) {
                 Bill b = new Bill(id, user, b_date, amount, account, target);
                 due_bills.add(b);
             }
@@ -384,8 +492,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return due_bills;
     }
 
-    public void pay_bills(SQLiteDatabase db, ArrayList<Bill> bill_list){
-        String where = bill_id+" = ?";
+    public void pay_bills(SQLiteDatabase db, ArrayList<Bill> bill_list) {
+        String where = bill_id + " = ?";
 
         for (Bill bill : bill_list) {
             reduce_funds(db,
@@ -399,7 +507,43 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         }
     }
 
+    public void new_secret(SQLiteDatabase db, String user_id, String question, String ansvwer) {
+        ContentValues values = new ContentValues();
 
+        values.put(secrets_user, user_id);
+        values.put(secret_quest, question);
+        values.put(secret_ansvwer, ansvwer);
 
+        db.insert(secrets, null, values);
+    }
+
+    public String test_secret(SQLiteDatabase db, String full_name, String mail, String answer) {
+        String pass = "";
+        String user_id = "-1";
+
+        Cursor u = db.query(user, new String[]{user_ID, user_password}, user_username + " = ? AND " + user_mail + " = ?", new String[]{full_name, mail}, null, null, null);
+        while (u.moveToNext()) {
+            user_id = u.getString(u.getColumnIndex(user_ID));
+            pass = u.getString(u.getColumnIndex(user_password));
+        }
+        u.close();
+
+        Cursor result = db.query(secrets, null, secrets_user + " = ?", new String[]{user_id}, null, null, null);
+        boolean test = false;
+        while (result.moveToNext()) {
+            if (answer.equalsIgnoreCase(result.getString(result.getColumnIndex(secret_ansvwer)))) {
+                test = true;
+            } else {
+                test = false;
+            }
+        }
+        result.close();
+        if (test) {
+            return pass;
+        } else {
+            pass = "";
+        }
+        return pass;
+    }
 
 }

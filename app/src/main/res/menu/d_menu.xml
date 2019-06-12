@@ -4,20 +4,27 @@
     tools:showIn="navigation_view">
 
     <group android:checkableBehavior="single">
-        <item android:id="@+id/account"
+
+
+        <item
+            android:id="@+id/request_account"
             android:icon="@drawable/ic_account"
-            android:title="@string/acc">
-        </item>
+            android:maxLines="5"
+            android:title="@string/acc"
+            android:visible="true" />
+
+        <item android:id="@+id/new_transfer"
+            android:icon="@drawable/ic_transfer"
+            android:title="@string/new_transfer" />
+
+        <item android:id="@+id/menu_payment"
+            android:icon="@drawable/ic_bill"
+            android:title="@string/bills" />
     </group>
 
 
     <item android:title="@string/opt">
         <menu>
-            <item android:id="@+id/nav_contact"
-                android:icon="@drawable/ic_contact"
-                android:title="@string/contact">
-            </item>
-
             <item android:id="@+id/nav_logout"
                 android:icon="@drawable/ic_logout"
                 android:title="@string/logout">

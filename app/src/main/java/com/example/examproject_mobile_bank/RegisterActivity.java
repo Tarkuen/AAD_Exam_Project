@@ -1,5 +1,6 @@
 package com.example.examproject_mobile_bank;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
@@ -16,9 +17,13 @@ import com.example.examproject_mobile_bank.data.DatabaseHandler;
 import com.example.examproject_mobile_bank.model.DatePicker;
 import com.example.examproject_mobile_bank.model.User;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends AppCompatActivity implements View.OnFocusChangeListener {
 
 
     EditText name;
@@ -30,6 +35,7 @@ public class RegisterActivity extends AppCompatActivity {
     EditText zip;
     Button register;
     EditText date;
+    EditText secret;
     DialogFragment date_dialog;
 
     DatabaseHandler db;
@@ -60,26 +66,14 @@ public class RegisterActivity extends AppCompatActivity {
         pass = (EditText) findViewById(R.id.password);
         phone = (EditText) findViewById(R.id.phone);
         mail = (EditText) findViewById(R.id.mail);
+        mail.setOnFocusChangeListener(this);
         street = (EditText) findViewById(R.id.street);
         city = (EditText) findViewById(R.id.city);
         zip = (EditText) findViewById(R.id.zipcode);
         register = (Button) findViewById(R.id.registeracc);
         date = (EditText) findViewById(R.id.register_bday);
-
-        date.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus){
-                    date_dialog = new DatePicker();
-                    date_dialog.show(getSupportFragmentManager(), "datePicker");
-                }
-                else{
-                    date.setText(date_dialog.toString());
-                }
-            }
-        });
-
-
+        date.setOnFocusChangeListener(this);
+        secret = (EditText) findViewById(R.id.answer);
 
 
         final ArrayList<EditText> all_text_fields = new ArrayList<>();
@@ -91,9 +85,9 @@ public class RegisterActivity extends AppCompatActivity {
         all_text_fields.add(city);
         all_text_fields.add(zip);
         all_text_fields.add(date);
+        all_text_fields.add(secret);
 
         i = new Intent(getBaseContext(), HomeScreenActivity.class);
-
 
         register.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -104,17 +98,38 @@ public class RegisterActivity extends AppCompatActivity {
                         warning = warning.concat(getResources().getResourceEntryName(field.getId())).toUpperCase();
                         Toast toast = Toast.makeText(getBaseContext(), warning, Toast.LENGTH_LONG);
                         toast.show();
+                        field.setTextColor(getResources().getColor(R.color.colorAccent));
                         return;
                     }
+                    else{
+                        field.setTextColor(getResources().getColor(R.color.colorPrimaryDark));
+                    }
                 }
-                User user = new User(name.getText().toString(),
-                        phone.getText().toString(),
-                        mail.getText().toString(),
-                        street.getText().toString(),
-                        city.getText().toString(),
-                        zip.getText().toString(),
-                        date.getText().toString()
-                );
+
+                @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                String now = sdf.format(new Date());
+                try {
+                    Date d1 = sdf.parse(now);
+                    Date d2 = sdf.parse(date.getText().toString());
+                    Calendar c = Calendar.getInstance();
+
+                    c.setTimeInMillis(d2.getTime());
+                    int mYear = c.get(Calendar.YEAR);
+                    c.setTimeInMillis(d1.getTime());
+                    int nYear = c.get(Calendar.YEAR);
+                    if (nYear - mYear <= 15){
+                        String warning = "Age Restricted: Must be 15 or older";
+                        Toast toast = Toast.makeText(getBaseContext(), warning, Toast.LENGTH_LONG);
+                        date.setTextColor(getResources().getColor(R.color.colorAccent));
+                        toast.show();
+                        return;
+                    }
+
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+
+                User user = new User();
 
                 SharedPreferences sharedPreferences = getSharedPreferences(getResources().getString(R.string.button_login) ,MODE_PRIVATE);
                 sharedPreferences.edit().putString(getString(R.string.pass), pass.getText().toString()).apply();
@@ -133,12 +148,44 @@ public class RegisterActivity extends AppCompatActivity {
                 };
 
                 Long id = db.new_user(database, values);
-                System.out.println("ID: "+ id);
                 db.first_account(database, String.valueOf(id));
+                user = db.fetch_user_by_ID(database, String.valueOf(id));
+                db.new_secret(database, String.valueOf(user.getId()),getString(R.string.question),secret.getText().toString());
                 i.putExtra(getString(R.string.username), user);
                 startActivity(i);
+                finish();
             }
         });
+
+    }
+
+
+    @Override
+    public void onFocusChange(View v, boolean hasFocus) {
+
+        switch (v.getId()){
+            case R.id.mail:
+                if(!v.hasFocus()){
+                    if (!mail.getText().toString().contains("@")){
+                        mail.setTextColor(getResources().getColor(R.color.colorAccent));
+                    }
+                    else {
+                        mail.setTextColor(getResources().getColor(R.color.colorPrimaryDark));
+                    }
+                }
+
+                break;
+            case R.id.register_bday:
+                if (hasFocus){
+                    date_dialog = new DatePicker();
+                    date_dialog.show(getSupportFragmentManager(), "datePicker");
+                }
+                else {
+                    date.setText(date_dialog.toString());
+                    break;
+                }
+
+        }
 
     }
 }

@@ -11,6 +11,7 @@ public class Bill implements Parcelable {
     private int amount;
     private int account;
     private int target;
+    private int repeat;
 
     public Bill(int id, int user, String b_date, int amount, int account, int target) {
         this.id = id;
@@ -21,6 +22,20 @@ public class Bill implements Parcelable {
         this.target = target;
     }
 
+    public Bill(int id, String b_date, int user, int amount, int account, int target, int repeat) {
+        this.id = id;
+        this.b_date = b_date;
+        this.user = user;
+        this.amount = amount;
+        this.account = account;
+        this.target = target;
+        this.repeat = repeat;
+    }
+
+    public Bill() {
+
+    }
+
     protected Bill(Parcel in) {
         id = in.readInt();
         b_date = in.readString();
@@ -28,6 +43,7 @@ public class Bill implements Parcelable {
         amount = in.readInt();
         account = in.readInt();
         target = in.readInt();
+        repeat = in.readInt();
     }
 
     public static final Creator<Bill> CREATOR = new Creator<Bill>() {
@@ -90,6 +106,10 @@ public class Bill implements Parcelable {
         this.target = target;
     }
 
+    public int getRepeat() {
+        return repeat;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -103,5 +123,19 @@ public class Bill implements Parcelable {
         dest.writeInt(amount);
         dest.writeInt(account);
         dest.writeInt(target);
+        dest.writeInt(repeat);
+    }
+
+    @Override
+    public String toString() {
+        return "Bill{" +
+                "id=" + id +
+                ", b_date='" + b_date + '\'' +
+                ", user=" + user +
+                ", amount=" + amount +
+                ", account=" + account +
+                ", target=" + target +
+                ", repeat=" + repeat +
+                '}';
     }
 }

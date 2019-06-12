@@ -16,14 +16,7 @@ public class User implements Parcelable {
     private String dep;
     private String b_day;
 
-    public User(String name, String phone, String mail, String street, String city, String zip, String b_day) {
-        this.name = name;
-        this.phone = phone;
-        this.mail = mail;
-        this.street = street;
-        this.city = city;
-        this.zip = zip;
-        this.b_day = b_day;
+    public User() {
     }
 
     public User(int id, String name, String phone, String mail, String street, String city, String zip, String dep, String b_day) {
@@ -110,9 +103,9 @@ public class User implements Parcelable {
                 ", city='" + city + '\'' +
                 ", zip='" + zip + '\'' +
                 ", dep='" + dep + '\'' +
+                ", b_day='" + b_day + '\'' +
                 '}';
     }
-
 
     @Override
     public int describeContents() {

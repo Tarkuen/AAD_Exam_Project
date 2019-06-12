@@ -52,6 +52,10 @@ public class BankAccount implements Parcelable {
         this.holdings = holdings;
     }
 
+    public BankAccount() {
+
+    }
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(id);
